@@ -12,6 +12,7 @@ try {
 export default appConfig as AppConfigType;
 
 export interface AppConfigType {
+  balanceThreshold: any;
   parsedRpcEndpoints: RpcEnvEndpoint[];
   maxLastXHourPollVoteNotification: number;
   axelarVoterAddress: string;

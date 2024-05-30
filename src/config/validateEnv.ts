@@ -1,3 +1,5 @@
+// src/config/validateEnv.ts
+
 import { AppConfigType } from "@/config/index";
 import { parseRpcEndpoints } from "@/config/parseRpcEndpoints";
 import { isValidVoterAddress } from "@utils/cosmos/axelar/addressUtil";
@@ -33,40 +35,39 @@ const {
   //Redis
   REDIS_HOST,
   REDIS_PORT,
+  // New variable
+  BALANCE_THRESHOLD,
 } = process.env;
 
 const isDev = process.env.NODE_ENV === "development";
-const defatultRedisHost = "localhost";
+const defaultRedisHost = "localhost";
 const defaultRedisPort = "6379";
 
 export const validateEnv = (): AppConfigType => {
-  const maxLastXHourPollVoteNotification =
-    LAST_X_HOUR_POLL_VOTE_NOTIFICATION ?? "12";
+  const maxLastXHourPollVoteNotification = LAST_X_HOUR_POLL_VOTE_NOTIFICATION ?? "12";
   const urlArrays: { [x: string]: string[] } = {
     mainnetAxelarRpcBaseUrls: parseStringArray(MAINNET_AXELAR_RPC_BASE_URLS),
     mainnetAxelarRestBaseUrls: parseStringArray(MAINNET_AXELAR_REST_BASE_URLS),
     mainnetAxelarWsUrls: parseStringArray(MAINNET_AXELAR_WS_URLS),
-    mainnetAxelarLCDRestBaseUrls: parseStringArray(
-      MAINNET_AXELAR_LCD_REST_BASE_URLS
-    ),
+    mainnetAxelarLCDRestBaseUrls: parseStringArray(MAINNET_AXELAR_LCD_REST_BASE_URLS),
   };
 
   for (const prop in urlArrays) {
     const urls = urlArrays[prop];
     urls.forEach((url) => {
       if (!isSafeUrl(url)) {
-        throw new Error(
-          `‼️ Invalid URL for ${prop} with !! this ${url} !! in Env file please fix it`
-        );
+        throw new Error(`‼️ Invalid URL for ${prop} with !! this ${url} !! in Env file please fix it`);
       }
     });
   }
 
   const axelarVoterAddress = AXELAR_VOTER_ADDRESS as string;
   if (!isValidVoterAddress(axelarVoterAddress)) {
-    throw new Error(
-      `‼️ Invalid Axelar Voter Address in Env file please fix it : ${axelarVoterAddress}`
-    );
+    throw new Error(`‼️ Invalid Axelar Voter Address in Env file please fix it : ${axelarVoterAddress}`);
+  }
+
+  if (isNaN(parseFloat(BALANCE_THRESHOLD as string))) {
+    throw new Error('‼️ Invalid BALANCE_THRESHOLD in Env file');
   }
 
   return {
@@ -77,9 +78,7 @@ export const validateEnv = (): AppConfigType => {
       medium: parseFloat(UPTIME_THRESHOLD_MEDIUM as string),
       high: parseFloat(UPTIME_THRESHOLD_HIGH as string),
     },
-    maxLastXHourPollVoteNotification: parseInt(
-      maxLastXHourPollVoteNotification
-    ),
+    maxLastXHourPollVoteNotification: parseInt(maxLastXHourPollVoteNotification),
     mainnetAxelarRestBaseUrls: urlArrays.mainnetAxelarRestBaseUrls,
     mainnetAxelarLCDRestBaseUrls: urlArrays.mainnetAxelarLCDRestBaseUrls,
     mainnetAxelarRpcBaseUrls: urlArrays.mainnetAxelarRpcBaseUrls,
@@ -93,8 +92,9 @@ export const validateEnv = (): AppConfigType => {
     dbPort: DB_PORT as string,
     logFormat: LOG_FORMAT as string,
     logDir: LOG_DIR as string,
-    redisHost: isDev ? defatultRedisHost : (REDIS_HOST as string),
+    redisHost: isDev ? defaultRedisHost : (REDIS_HOST as string),
     redisPort: parseInt(REDIS_PORT ?? defaultRedisPort),
+    balanceThreshold: parseFloat(BALANCE_THRESHOLD as string),
   };
 };
 
