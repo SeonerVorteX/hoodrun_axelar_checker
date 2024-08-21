@@ -6,10 +6,14 @@ import Redis from 'ioredis';
 const { redisHost, redisPort } = appConfig;
 
 const redisClient = new Redis({
-  host: process.env.REDIS_HOST || 'redis',
-  port: parseInt(process.env.REDIS_PORT || '6379'),
-  maxRetriesPerRequest: null,
-  enableReadyCheck: false
+  host: process.env.REDIS_HOST || redisHost || 'redis',
+  port: parseInt(process.env.REDIS_PORT || (redisPort?.toString()) || '6379', 10),
+  maxRetriesPerRequest: 3,  // veya başka bir uygun sayı
+  enableReadyCheck: false,
+  retryStrategy(times) {
+    const delay = Math.min(times * 50, 2000);
+    return delay;
+  }
 });
 
 redisClient.on('error', (error) => {
@@ -64,7 +68,8 @@ class AppQueueFactory {
         });
         this.onQueueError(queue, name);
         this.onQueueCompleted(queue, name);
-        queue.empty();
+        
+        // queue.empty() çağrısını kaldırdık
 
         this.queues[name] = queue;
         logger.info(`Queue ${name} created successfully`);
@@ -85,7 +90,7 @@ class AppQueueFactory {
 
   private static onQueueCompleted(queue: Queue.Queue, name: string) {
     queue.on("completed", (job) => {
-      logger.info(`Queue ${name} job completed`);
+      logger.info(`Queue ${name} job completed: ${job.id}`);
     });
   }
 
@@ -101,6 +106,19 @@ class AppQueueFactory {
 
   public static getAllQueues(): Queue.Queue[] {
     return Object.values(this.queues);
+  }
+
+  public static async closeAll() {
+    for (const [name, queue] of Object.entries(this.queues)) {
+      try {
+        await queue.close();
+        logger.info(`Queue ${name} closed successfully`);
+      } catch (error) {
+        logger.error(`Error closing queue ${name}: ${error}`);
+      }
+    }
+    await redisClient.quit();
+    logger.info('Redis connection closed');
   }
 }
 
