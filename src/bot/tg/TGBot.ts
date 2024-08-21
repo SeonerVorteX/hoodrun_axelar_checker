@@ -61,8 +61,23 @@ export class TGBot {
       logger.info(`Message sent to user ${chat_id}`);
     } catch (error) {
       logger.error(`Error while sending message to user ${chat_id}`, error);
-      throw error;
+      // Add retry mechanism in case of error
+      await this.retryMessageSend(chat_id, message, 3); // Try 3 times
     }
+  }
+
+  private async retryMessageSend(chat_id: number, message: string, retries: number) {
+    for (let i = 0; i < retries; i++) {
+      try {
+        await this.bot.api.sendMessage(chat_id, message, { parse_mode: "HTML" });
+        logger.info(`Message sent to user ${chat_id} after retry`);
+        return;
+      } catch (error) {
+        logger.error(`Retry ${i + 1} failed for user ${chat_id}:`, error);
+        await new Promise(resolve => setTimeout(resolve, 1000)); // Wait for 1 second
+      }
+    }
+    logger.error(`Failed to send message to user ${chat_id} after ${retries} retries`);
   }
 
   private async sendUptimeNotification<T extends UptimeNotification>(data: T) {
@@ -450,6 +465,28 @@ export class TGBot {
     await this.bot.api.setMyCommands(commands);
   }
   private async initBot() {
-    await this.bot.start();
+    const startBot = async () => {
+      try {
+        await this.bot.start({
+          onStart: (botInfo) => {
+            logger.info(`Bot ${botInfo.username} started`);
+          },
+        });
+      } catch (error) {
+        logger.error("Failed to start bot:", error);
+        setTimeout(startBot, 5000);
+      }
+    };
+
+    await startBot();
+
+    setInterval(async () => {
+      try {
+        await this.bot.api.getMe();
+      } catch (error) {
+        logger.error("Bot connection lost, reconnecting...", error);
+        await startBot();
+      }
+    }, 60000);
   }
 }
