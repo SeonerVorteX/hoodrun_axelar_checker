@@ -34,7 +34,7 @@ import {
   addBroadcasterBalanceCheckerJob,
 } from "@/queue/jobs/BroadcasterBalanceCheckerJob";
 
-class App {
+export class App {
   axelarQueryService: AxelarQueryService;
   env: string;
   private redisClient: ReturnType<typeof createClient>;
