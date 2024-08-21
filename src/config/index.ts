@@ -36,4 +36,6 @@ export interface AppConfigType {
     medium: number;
     high: number;
   };
+  broadcasterBalanceThreshold: number;
+  broadcasterBalanceCheckInterval: number;
 }

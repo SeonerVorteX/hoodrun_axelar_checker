@@ -18,6 +18,8 @@ const {
   TESTNET_AXELAR_REST_BASE_URLS,
   //Axelar
   AXELAR_VOTER_ADDRESS,
+  BROADCASTER_BALANCE_THRESHOLD,
+  BROADCASTER_BALANCE_CHECK_INTERVAL,
   UPTIME_THRESHOLD_LOW,
   UPTIME_THRESHOLD_MEDIUM,
   UPTIME_THRESHOLD_HIGH,
@@ -35,13 +37,21 @@ const {
   //Redis
   REDIS_HOST,
   REDIS_PORT,
-  // New variable
-  BALANCE_THRESHOLD,
 } = process.env;
 
 const isDev = process.env.NODE_ENV === "development";
 const defaultRedisHost = "localhost";
 const defaultRedisPort = "6379";
+
+const broadcasterBalanceThreshold = parseInt(BROADCASTER_BALANCE_THRESHOLD as string);
+if (isNaN(broadcasterBalanceThreshold) || broadcasterBalanceThreshold <= 0) {
+  throw new Error('Invalid BROADCASTER_BALANCE_THRESHOLD');
+}
+
+const broadcasterBalanceCheckInterval = parseInt(BROADCASTER_BALANCE_CHECK_INTERVAL as string);
+if (isNaN(broadcasterBalanceCheckInterval) || broadcasterBalanceCheckInterval <= 0) {
+  throw new Error('Invalid BROADCASTER_BALANCE_CHECK_INTERVAL');
+}
 
 export const validateEnv = (): AppConfigType => {
   const maxLastXHourPollVoteNotification = LAST_X_HOUR_POLL_VOTE_NOTIFICATION ?? "12";
@@ -66,9 +76,11 @@ export const validateEnv = (): AppConfigType => {
     throw new Error(`‼️ Invalid Axelar Voter Address in Env file please fix it : ${axelarVoterAddress}`);
   }
 
-  if (isNaN(parseFloat(BALANCE_THRESHOLD as string))) {
+  if (isNaN(parseFloat(BROADCASTER_BALANCE_THRESHOLD as string))) {
     throw new Error('‼️ Invalid BALANCE_THRESHOLD in Env file');
   }
+
+  const balanceThreshold = parseFloat(BROADCASTER_BALANCE_THRESHOLD as string);
 
   return {
     axelarVoterAddress,
@@ -94,7 +106,9 @@ export const validateEnv = (): AppConfigType => {
     logDir: LOG_DIR as string,
     redisHost: isDev ? defaultRedisHost : (REDIS_HOST as string),
     redisPort: parseInt(REDIS_PORT ?? defaultRedisPort),
-    balanceThreshold: parseFloat(BALANCE_THRESHOLD as string),
+    broadcasterBalanceThreshold,
+    broadcasterBalanceCheckInterval,
+    balanceThreshold,
   };
 };
 
