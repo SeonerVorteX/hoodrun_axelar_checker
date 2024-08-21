@@ -1,3 +1,6 @@
+import { EventEmitter } from 'events';
+EventEmitter.defaultMaxListeners = 20;
+
 import App from "@/app/App";
 import { logger } from "@/utils/logger";
 

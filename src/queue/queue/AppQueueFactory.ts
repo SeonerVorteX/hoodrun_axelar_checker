@@ -6,15 +6,10 @@ import Redis from 'ioredis';
 const { redisHost, redisPort } = appConfig;
 
 const redisClient = new Redis({
-  host: redisHost,
-  port: redisPort,
-  retryStrategy: (times) => {
-    const delay = Math.min(times * 50, 2000);
-    logger.info(`Attempting to reconnect to Redis (attempt ${times})`);
-    return delay;
-  },
+  host: process.env.REDIS_HOST || 'redis',
+  port: parseInt(process.env.REDIS_PORT || '6379'),
   maxRetriesPerRequest: null,
-  enableReadyCheck: false,
+  enableReadyCheck: false
 });
 
 redisClient.on('error', (error) => {
@@ -58,9 +53,9 @@ class AppQueueFactory {
               case 'client':
                 return redisClient;
               case 'subscriber':
-                return new Redis(redisClient.options);
+                return redisClient.duplicate();
               case 'bclient':
-                return new Redis(redisClient.options);
+                return redisClient.duplicate();
               default:
                 return redisClient;
             }
