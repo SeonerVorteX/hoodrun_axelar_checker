@@ -16,6 +16,8 @@ const {
   TESTNET_AXELAR_REST_BASE_URLS,
   //Axelar
   AXELAR_VOTER_ADDRESS,
+  BROADCASTER_BALANCE_THRESHOLD,
+  BROADCASTER_BALANCE_CHECK_INTERVAL,
   UPTIME_THRESHOLD_LOW,
   UPTIME_THRESHOLD_MEDIUM,
   UPTIME_THRESHOLD_HIGH,
@@ -38,6 +40,16 @@ const {
 const isDev = process.env.NODE_ENV === "development";
 const defatultRedisHost = "localhost";
 const defaultRedisPort = "6379";
+
+const broadcasterBalanceThreshold = parseInt(BROADCASTER_BALANCE_THRESHOLD as string);
+if (isNaN(broadcasterBalanceThreshold) || broadcasterBalanceThreshold <= 0) {
+  throw new Error('Invalid BROADCASTER_BALANCE_THRESHOLD');
+}
+
+const broadcasterBalanceCheckInterval = parseInt(BROADCASTER_BALANCE_CHECK_INTERVAL as string);
+if (isNaN(broadcasterBalanceCheckInterval) || broadcasterBalanceCheckInterval <= 0) {
+  throw new Error('Invalid BROADCASTER_BALANCE_CHECK_INTERVAL');
+}
 
 export const validateEnv = (): AppConfigType => {
   const maxLastXHourPollVoteNotification =
@@ -95,6 +107,8 @@ export const validateEnv = (): AppConfigType => {
     logDir: LOG_DIR as string,
     redisHost: isDev ? defatultRedisHost : (REDIS_HOST as string),
     redisPort: parseInt(REDIS_PORT ?? defaultRedisPort),
+    broadcasterBalanceThreshold,
+    broadcasterBalanceCheckInterval,
   };
 };
 

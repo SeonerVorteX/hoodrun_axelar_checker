@@ -29,6 +29,10 @@ import { logger } from '@/utils/logger';
 import AppQueueFactory from "@/queue/queue/AppQueueFactory";
 import mongoose from 'mongoose';
 import { createClient } from 'redis';
+import {
+  initBroadcasterBalanceCheckerQueue,
+  addBroadcasterBalanceCheckerJob,
+} from "@/queue/jobs/BroadcasterBalanceCheckerJob";
 
 class App {
   axelarQueryService: AxelarQueryService;
@@ -117,6 +121,7 @@ class App {
     await initNewWsAllPollDataQueue();
 
     await initRpcEndpointHealthcheckerQueue();
+    await initBroadcasterBalanceCheckerQueue();
   }
 
   private async initJobs() {
@@ -126,6 +131,7 @@ class App {
       { name: 'valUptimeChecker', job: addValUptimeCheckerJob },
       { name: 'pollVoteNotification', job: addPollVoteNotificationJob },
       { name: 'rpcEndpointHealthchecker', job: addRpcEndpointHealthcheckerJob },
+      { name: 'broadcasterBalanceChecker', job: addBroadcasterBalanceCheckerJob },
     ];
 
     for (const { name, job } of jobs) {

@@ -12,6 +12,7 @@ import { chatSaverMiddleware } from "@/bot/tg/middlewares/chatSaverMiddleware";
 import appConfig from "@config/index";
 import { AppDb } from "@database/database";
 import {
+  BroadcasterBalanceLowNotificationDataType,
   ChainRegistrationStatus,
   INotification,
   NotificationEvent,
@@ -114,6 +115,13 @@ export class TGBot {
     );
   }
 
+  private async sendBroadcasterBalanceLowNotification<T extends BroadcasterBalanceLowNotificationDataType & { chat_id: number }>(data: T) {
+    await this.sendMessageToUser(
+      { chat_id: data.chat_id },
+      this.tgReply.broadcasterBalanceLowReply(data)
+    );
+  }
+
   public async sendNotification(
     notification: INotification
   ): Promise<{ sentSuccess: boolean }> {
@@ -146,6 +154,13 @@ export class TGBot {
       case NotificationEvent.EVM_SUPPORTED_CHAIN_REGISTRATION:
         await this.sendEvmSupChainNotif({
           ...(data as EvmSupprtedChainRegistrationNotification),
+          chat_id: tgRecipient,
+        });
+        sentSuccess = true;
+        break;
+      case NotificationEvent.BROADCASTER_BALANCE_LOW:
+        await this.sendBroadcasterBalanceLowNotification({
+          ...(data as BroadcasterBalanceLowNotificationDataType),
           chat_id: tgRecipient,
         });
         sentSuccess = true;
