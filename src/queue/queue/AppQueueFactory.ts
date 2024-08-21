@@ -14,6 +14,7 @@ const redisClient = new Redis({
     return delay;
   },
   maxRetriesPerRequest: null,
+  enableReadyCheck: false,
 });
 
 redisClient.on('error', (error) => {
@@ -52,7 +53,18 @@ class AppQueueFactory {
     if (!this.queues[name]) {
       try {
         const queue = new Queue(name, {
-          createClient: () => redisClient,
+          createClient: (type) => {
+            switch (type) {
+              case 'client':
+                return redisClient;
+              case 'subscriber':
+                return new Redis(redisClient.options);
+              case 'bclient':
+                return new Redis(redisClient.options);
+              default:
+                return redisClient;
+            }
+          },
           limiter: { max: 5000, duration: 1000 },
         });
         this.onQueueError(queue, name);
