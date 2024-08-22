@@ -8,7 +8,7 @@ const { redisHost, redisPort } = appConfig;
 const redisClient = new Redis({
   host: process.env.REDIS_HOST || redisHost || 'redis',
   port: parseInt(process.env.REDIS_PORT || (redisPort?.toString()) || '6379', 10),
-  maxRetriesPerRequest: 3,  // veya başka bir uygun sayı
+  maxRetriesPerRequest: 3,
   enableReadyCheck: false,
   retryStrategy(times) {
     const delay = Math.min(times * 50, 2000);

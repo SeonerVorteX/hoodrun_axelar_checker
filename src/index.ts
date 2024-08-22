@@ -11,14 +11,29 @@ logger.info("Starting bot...");
 setupExitHandlers();
 
 async function main() {
-  try {
-    const app = new App();
-    await app.initalizeApplication();
-    logger.info("Application initialized");
-  } catch (error) {
-    logger.error("Error initializing application:", error);
-    process.exit(1);
-  }
+  const maxRetries = 3;
+  let retries = 0;
+
+  const startWithRetry = async () => {
+    try {
+      const app = new App();
+      await app.initalizeApplication();
+      logger.info("Application initialized and running");
+    } catch (error) {
+      logger.error("Error starting application:", error);
+      retries++;
+      if (retries < maxRetries) {
+        const delay = Math.pow(2, retries) * 1000;
+        logger.info(`Retrying application start in ${delay}ms (attempt ${retries}/${maxRetries})`);
+        setTimeout(startWithRetry, delay);
+      } else {
+        logger.error("Max retries reached. Application could not be started.");
+        process.exit(1);
+      }
+    }
+  };
+
+  await startWithRetry();
 }
 
 main();

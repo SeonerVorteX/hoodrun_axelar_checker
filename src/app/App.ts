@@ -71,7 +71,7 @@ export default class App {
         logger.error(`Error initializing application: ${error}`);
         retries++;
         if (retries < maxRetries) {
-          const delay = Math.pow(2, retries) * 1000; // Exponential backoff
+          const delay = Math.pow(2, retries) * 1000;
           logger.info(`Retrying initialization in ${delay}ms (attempt ${retries}/${maxRetries})`);
           setTimeout(initializeWithRetry, delay);
         } else {
