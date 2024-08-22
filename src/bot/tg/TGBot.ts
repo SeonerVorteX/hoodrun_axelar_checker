@@ -24,7 +24,7 @@ import { logger } from "@utils/logger";
 import { Bot, InlineKeyboard } from "grammy";
 
 export class TGBot {
-  private static _instance: TGBot;
+  private static _instance: TGBot | null = null;
   bot: Bot;
   tgReply: TgReply;
   appDb: AppDb;
