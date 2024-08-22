@@ -504,4 +504,9 @@ export class TGBot {
       }
     }, 60000);
   }
+
+  public async stop(): Promise<void> {
+    await this.bot.stop();
+    logger.info('Telegram bot stopped');
+  }
 }

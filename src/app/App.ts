@@ -33,19 +33,28 @@ import {
   initBroadcasterBalanceCheckerQueue,
   addBroadcasterBalanceCheckerJob,
 } from "@/queue/jobs/BroadcasterBalanceCheckerJob";
+import { AppDb } from "@database/database";
 
 export default class App {
   axelarQueryService: AxelarQueryService;
   env: string;
   private redisClient: ReturnType<typeof createClient>;
+  private tgBot: TGBot | null;
+  private appDb: AppDb;
 
   constructor() {
     this.env = process.env.NODE_ENV ?? "development";
-
     this.axelarQueryService = new AxelarQueryService();
     this.redisClient = createClient();
     this.redisClient.connect();
+    this.appDb = new AppDb();
+    this.tgBot = null; // TGBot'u başlangıçta null olarak ayarlayın
   }
+
+  async initTgBot() {
+    this.tgBot = await TGBot.getInstance();
+  }
+
   async initalizeApplication() {
     const maxRetries = 3;
     let retries = 0;
@@ -54,7 +63,7 @@ export default class App {
       try {
         await this.initDbConn();
         await this.initAxelarWS();
-        await this.initTgBot();
+        await this.initTgBot(); // TGBot'u başlatın
         await this.initJobsAndQueues();
         this.initHealthCheck();
         logger.info("Application initialized successfully");
@@ -75,7 +84,11 @@ export default class App {
     await initializeWithRetry();
   }
   private async initAxelarWS() {
-    new AxelarWsClient();
+    const wsClient = new AxelarWsClient();
+    wsClient.on('disconnect', () => {
+      logger.warn('WebSocket disconnected. Attempting to reconnect...');
+      setTimeout(() => this.initAxelarWS(), 5000);
+    });
   }
 
   private async initDbConn() {
@@ -102,9 +115,6 @@ export default class App {
     await connectWithRetry();
   }
 
-  private async initTgBot() {
-    await TGBot.getInstance();
-  }
   private async initJobsAndQueues() {
     // Init queues before jobs
     await this.initQueue();
@@ -214,8 +224,31 @@ export default class App {
       return false;
     }
   }
+
+  public async shutdown() {
+    logger.info('Shutting down application...');
+    // Close database connection
+    await this.appDb.close();
+    // Stop bot
+    if (this.tgBot) {
+      await this.tgBot.stop();
+    }
+    logger.info('Application shut down successfully');
+  }
 }
+
+const app = new App();
 
 process.on('unhandledRejection', (reason, promise) => {
   logger.error('Unhandled Rejection at:', promise, 'reason:', reason);
+});
+
+process.on('SIGINT', async () => {
+  await app.shutdown();
+  process.exit(0);
+});
+
+process.on('SIGTERM', async () => {
+  await app.shutdown();
+  process.exit(0);
 });

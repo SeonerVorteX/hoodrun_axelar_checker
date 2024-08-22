@@ -35,25 +35,35 @@ export const initSendNotificationsQueue = async () => {
             return;
           }
 
+          logger.info(`Found ${notSentNotifications.length} unsent notifications`);
+
           const tgBot = await TGBot.getInstance();
 
           const results = await Promise.allSettled(
             notSentNotifications.map(async (notification: INotification) => {
               try {
+                logger.info(`Attempting to send notification ${notification.notification_id}`);
                 const result = await tgBot.sendNotification(notification);
                 if (result.sentSuccess) {
                   await notificationRepo.updateOne(
                     { notification_id: notification.notification_id },
                     { sent: true }
                   );
+                  logger.info(`Successfully sent notification ${notification.notification_id}`);
+                } else {
+                  logger.warn(`Failed to send notification ${notification.notification_id}`);
                 }
                 return { success: result.sentSuccess, notification_id: notification.notification_id };
               } catch (error) {
-                logger.error(`Failed to send notification ${notification.notification_id}:`, error);
+                logger.error(`Error sending notification ${notification.notification_id}:`, error);
                 return { success: false, notification_id: notification.notification_id, error };
               }
             })
           );
+
+          const successCount = results.filter(r => r.status === 'fulfilled' && r.value.success).length;
+          const failCount = results.length - successCount;
+          logger.info(`Notification sending complete. Success: ${successCount}, Failed: ${failCount}`);
 
           const failedNotifications = results.filter(
             (result) => result.status === 'rejected' || (result.status === 'fulfilled' && !result.value.success)
@@ -63,10 +73,8 @@ export const initSendNotificationsQueue = async () => {
             logger.warn(`${failedNotifications.length} notifications could not be sent`);
             await reQueueFailedNotifications(failedNotifications);
           }
-
-          logger.info(`Successfully sent ${results.length - failedNotifications.length} notifications`);
         } catch (error) {
-          logger.error("Unexpected error while processing notifications:", error);
+          logger.error("Error in processWithRetry:", error);
           retries++;
           if (retries < maxRetries) {
             const delay = Math.pow(2, retries) * 1000; // Exponential backoff
