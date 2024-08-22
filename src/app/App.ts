@@ -215,3 +215,7 @@ export default class App {
     }
   }
 }
+
+process.on('unhandledRejection', (reason, promise) => {
+  logger.error('Unhandled Rejection at:', promise, 'reason:', reason);
+});
