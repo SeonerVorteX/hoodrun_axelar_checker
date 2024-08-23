@@ -14,6 +14,9 @@ setupExitHandlers();
 
 async function main() {
   try {
+    logger.info("Starting bot...");
+    logger.info(`Redis configuration: host=${appConfig.redisHost}, port=${appConfig.redisPort}`);
+
     logger.info("Testing Redis connection...");
     const redisConnected = await testRedisConnection();
     if (!redisConnected) {
@@ -22,27 +25,8 @@ async function main() {
     logger.info("Redis connection successful.");
 
     const app = new App();
-    const maxRetries = 3;
-    let retries = 0;
-
-    const startWithRetry = async () => {
-      try {
-        await app.initalizeApplication();
-        logger.info("Application initialized and running");
-      } catch (error) {
-        logger.error("Error initializing application:", error);
-        retries++;
-        if (retries < maxRetries) {
-          const delay = Math.pow(2, retries) * 1000;
-          logger.info(`Retrying initialization in ${delay}ms (attempt ${retries}/${maxRetries})`);
-          setTimeout(startWithRetry, delay);
-        } else {
-          throw new Error("Max retries reached. Application could not be initialized.");
-        }
-      }
-    };
-
-    await startWithRetry();
+    await app.initalizeApplication();
+    logger.info("Application initialized and running");
   } catch (error) {
     logger.error("Fatal error:", error);
     await gracefulShutdown('FATAL_ERROR');

@@ -129,15 +129,18 @@ export async function testRedisConnection() {
     port: appConfig.redisPort,
     maxRetriesPerRequest: 1,
     retryStrategy: () => null,
+    connectTimeout: 5000,
   });
 
   try {
+    logger.info(`Attempting to connect to Redis at ${appConfig.redisHost}:${appConfig.redisPort}`);
     await client.ping();
     logger.info('Redis connection test successful');
     await client.quit();
     return true;
   } catch (error) {
     logger.error('Redis connection check failed:', error);
+    logger.error(`Redis connection details: host=${appConfig.redisHost}, port=${appConfig.redisPort}`);
     await client.quit();
     return false;
   }
