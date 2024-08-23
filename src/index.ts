@@ -13,21 +13,21 @@ setupExitHandlers();
 async function main() {
   const maxRetries = 3;
   let retries = 0;
+  const app = new App();
 
   const startWithRetry = async () => {
     try {
-      const app = new App();
       await app.initalizeApplication();
       logger.info("Application initialized and running");
     } catch (error) {
-      logger.error("Error starting application:", error);
+      logger.error("Error initializing application:", error);
       retries++;
       if (retries < maxRetries) {
         const delay = Math.pow(2, retries) * 1000;
-        logger.info(`Retrying application start in ${delay}ms (attempt ${retries}/${maxRetries})`);
+        logger.info(`Retrying initialization in ${delay}ms (attempt ${retries}/${maxRetries})`);
         setTimeout(startWithRetry, delay);
       } else {
-        logger.error("Max retries reached. Application could not be started.");
+        logger.error("Max retries reached. Application could not be initialized.");
         process.exit(1);
       }
     }
@@ -36,34 +36,28 @@ async function main() {
   await startWithRetry();
 }
 
-main();
-
 function setupExitHandlers() {
   process.on("uncaughtException", (err) => {
     logger.error("Uncaught Exception:", err);
-    logger.info("Node NOT Exiting...");
+    gracefulShutdown('UNCAUGHT_EXCEPTION');
   });
 
   process.on("unhandledRejection", (reason, promise) => {
     logger.error("Unhandled Rejection at:", promise, "reason:", reason);
-    logger.info("Node NOT Exiting...");
+    gracefulShutdown('UNHANDLED_REJECTION');
   });
 
   process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
   process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 }
 
+const app = new App();
+
 async function gracefulShutdown(signal: string) {
-  logger.info(`${signal} received. Starting graceful shutdown...`);
-
+  logger.info(`Received ${signal}. Starting graceful shutdown...`);
   try {
-    // Close all queues and Redis connection in AppQueueFactory
     await AppQueueFactory.closeAll();
-
-    // If you have a shutdown method in your App class, you can call it here
-    // await app.shutdown();
-
-    logger.info('Graceful shutdown completed.');
+    await app.shutdown();
     process.exit(0);
   } catch (error) {
     logger.error('Error during graceful shutdown:', error);
