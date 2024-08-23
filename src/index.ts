@@ -1,17 +1,26 @@
 import { EventEmitter } from 'events';
 EventEmitter.defaultMaxListeners = 20;
-
 import App from "@/app/App";
 import { logger } from "@/utils/logger";
-
 import "@extensions/array.extensions";
 import AppQueueFactory from "queue/queue/AppQueueFactory";
 import { testRedisConnection } from "queue/queue/AppQueueFactory";
+import appConfig from "@config/index";
 
 logger.info("Starting bot...");
+logger.info(`Redis configuration: host=${appConfig.redisHost}, port=${appConfig.redisPort}`);
+
 setupExitHandlers();
 
 async function main() {
+  logger.info("Testing Redis connection...");
+  const redisConnected = await testRedisConnection();
+  if (!redisConnected) {
+    logger.error("Redis connection failed. Exiting application.");
+    process.exit(1);
+  }
+  logger.info("Redis connection successful.");
+
   const maxRetries = 3;
   let retries = 0;
   const app = new App();
@@ -35,7 +44,6 @@ async function main() {
   };
 
   await startWithRetry();
-  await testRedisConnection();
 }
 
 function setupExitHandlers() {
@@ -62,9 +70,15 @@ async function gracefulShutdown(signal: string) {
   try {
     await AppQueueFactory.closeAll();
     await app.shutdown();
+    logger.info('Application shut down successfully');
     process.exit(0);
   } catch (error) {
     logger.error('Error during graceful shutdown:', error);
     process.exit(1);
   }
 }
+
+main().catch((error) => {
+  logger.error("Unhandled error in main function:", error);
+  process.exit(1);
+});

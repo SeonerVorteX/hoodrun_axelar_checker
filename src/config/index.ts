@@ -1,6 +1,5 @@
 import { RpcEnvEndpoint } from "@/config/parseRpcEndpoints";
 import { validateEnv } from "@/config/validateEnv";
-
 let appConfig: AppConfigType | {} = {};
 
 try {
