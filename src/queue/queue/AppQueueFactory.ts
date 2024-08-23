@@ -6,8 +6,8 @@ import Redis from 'ioredis';
 const { redisHost, redisPort } = appConfig;
 
 const redisClient = new Redis({
-  host: redisHost,
-  port: redisPort,
+  host: appConfig.redisHost,
+  port: appConfig.redisPort,
   maxRetriesPerRequest: 3,
   enableReadyCheck: false,
   retryStrategy(times) {
@@ -124,11 +124,21 @@ class AppQueueFactory {
 }
 
 export async function testRedisConnection() {
+  const client = new Redis({
+    host: appConfig.redisHost,
+    port: appConfig.redisPort,
+    maxRetriesPerRequest: 1,
+    retryStrategy: () => null,
+  });
+
   try {
-    await redisClient.ping();
+    await client.ping();
+    logger.info('Redis connection test successful');
+    await client.quit();
     return true;
   } catch (error) {
     logger.error('Redis connection check failed:', error);
+    await client.quit();
     return false;
   }
 }

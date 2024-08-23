@@ -13,50 +13,51 @@ logger.info(`Redis configuration: host=${appConfig.redisHost}, port=${appConfig.
 setupExitHandlers();
 
 async function main() {
-  logger.info("Testing Redis connection...");
-  const redisConnected = await testRedisConnection();
-  if (!redisConnected) {
-    logger.error("Redis connection failed. Exiting application.");
-    process.exit(1);
-  }
-  logger.info("Redis connection successful.");
-
-  const maxRetries = 3;
-  let retries = 0;
-  const app = new App();
-
-  const startWithRetry = async () => {
-    try {
-      await app.initalizeApplication();
-      logger.info("Application initialized and running");
-    } catch (error) {
-      logger.error("Error initializing application:", error);
-      retries++;
-      if (retries < maxRetries) {
-        const delay = Math.pow(2, retries) * 1000;
-        logger.info(`Retrying initialization in ${delay}ms (attempt ${retries}/${maxRetries})`);
-        setTimeout(startWithRetry, delay);
-      } else {
-        logger.error("Max retries reached. Application could not be initialized.");
-        process.exit(1);
-      }
+  try {
+    logger.info("Testing Redis connection...");
+    const redisConnected = await testRedisConnection();
+    if (!redisConnected) {
+      throw new Error("Redis connection failed.");
     }
-  };
+    logger.info("Redis connection successful.");
 
-  await startWithRetry();
+    const app = new App();
+    const maxRetries = 3;
+    let retries = 0;
+
+    const startWithRetry = async () => {
+      try {
+        await app.initalizeApplication();
+        logger.info("Application initialized and running");
+      } catch (error) {
+        logger.error("Error initializing application:", error);
+        retries++;
+        if (retries < maxRetries) {
+          const delay = Math.pow(2, retries) * 1000;
+          logger.info(`Retrying initialization in ${delay}ms (attempt ${retries}/${maxRetries})`);
+          setTimeout(startWithRetry, delay);
+        } else {
+          throw new Error("Max retries reached. Application could not be initialized.");
+        }
+      }
+    };
+
+    await startWithRetry();
+  } catch (error) {
+    logger.error("Fatal error:", error);
+    await gracefulShutdown('FATAL_ERROR');
+  }
 }
 
 function setupExitHandlers() {
-  process.on("uncaughtException", (err) => {
+  process.on("uncaughtException", async (err) => {
     logger.error("Uncaught Exception:", err);
-    gracefulShutdown('UNCAUGHT_EXCEPTION');
+    await gracefulShutdown('UNCAUGHT_EXCEPTION');
   });
 
-  process.on("unhandledRejection", (reason, promise) => {
+  process.on("unhandledRejection", async (reason, promise) => {
     logger.error("Unhandled Rejection at:", promise, "reason:", reason);
-    logger.error("Unhandled Rejection details:", reason);
-    logger.error("Unhandled Rejection promise:", promise);
-    gracefulShutdown('UNHANDLED_REJECTION');
+    await gracefulShutdown('UNHANDLED_REJECTION');
   });
 
   process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
@@ -71,14 +72,14 @@ async function gracefulShutdown(signal: string) {
     await AppQueueFactory.closeAll();
     await app.shutdown();
     logger.info('Application shut down successfully');
-    process.exit(0);
   } catch (error) {
     logger.error('Error during graceful shutdown:', error);
-    process.exit(1);
+  } finally {
+    process.exit(signal === 'FATAL_ERROR' ? 1 : 0);
   }
 }
 
 main().catch((error) => {
   logger.error("Unhandled error in main function:", error);
-  process.exit(1);
+  gracefulShutdown('UNHANDLED_ERROR');
 });
