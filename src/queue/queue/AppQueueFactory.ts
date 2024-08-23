@@ -7,7 +7,7 @@ const { redisHost, redisPort } = appConfig;
 
 const redisClient = new Redis({
   host: process.env.REDIS_HOST || redisHost || 'redis',
-  port: parseInt(process.env.REDIS_PORT || (redisPort?.toString()) || '6379', 10),
+  port: parseInt(process.env.REDIS_PORT || redisPort?.toString() || '6379', 10),
   maxRetriesPerRequest: 3,
   enableReadyCheck: false,
   retryStrategy(times) {
@@ -119,6 +119,16 @@ class AppQueueFactory {
     }
     await redisClient.quit();
     logger.info('Redis connection closed');
+  }
+}
+
+export async function testRedisConnection() {
+  try {
+    await redisClient.ping();
+    return true;
+  } catch (error) {
+    logger.error('Redis connection check failed:', error);
+    return false;
   }
 }
 

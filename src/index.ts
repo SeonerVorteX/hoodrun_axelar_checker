@@ -6,6 +6,7 @@ import { logger } from "@/utils/logger";
 
 import "@extensions/array.extensions";
 import AppQueueFactory from "queue/queue/AppQueueFactory";
+import { testRedisConnection } from "queue/queue/AppQueueFactory";
 
 logger.info("Starting bot...");
 setupExitHandlers();
@@ -34,6 +35,7 @@ async function main() {
   };
 
   await startWithRetry();
+  await testRedisConnection();
 }
 
 function setupExitHandlers() {
