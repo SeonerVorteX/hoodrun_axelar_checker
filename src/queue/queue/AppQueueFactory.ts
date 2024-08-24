@@ -66,6 +66,15 @@ class AppQueueFactory {
             }
           },
           limiter: { max: 5000, duration: 1000 },
+          defaultJobOptions: {
+            attempts: 3,
+            backoff: {
+              type: 'exponential',
+              delay: 1000,
+            },
+            removeOnComplete: true,
+            removeOnFail: false,
+          },
         });
         this.onQueueError(queue, name);
         this.onQueueCompleted(queue, name);
