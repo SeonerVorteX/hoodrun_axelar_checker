@@ -3,10 +3,8 @@ import { AxiosService } from "@/services/rest/axios/AxiosService";
 import { logger } from "@utils/logger";
 
 interface BalanceResponse {
-  balance: {
-    denom: string;
-    amount: string;
-  };
+  balances: { denom: string; amount: string }[];
+  pagination: { next_key: null; total: string };
 }
 
 export class AxelarBalanceQueryService {
@@ -22,10 +20,18 @@ export class AxelarBalanceQueryService {
     try {
       const response = await this.restClient.request<BalanceResponse>({
         method: "GET",
-        url: `/cosmos/bank/v1beta1/balances/${appConfig.axelarVoterAddress}/uaxl`,
+        url: `/cosmos/bank/v1beta1/balances/${appConfig.axelarVoterAddress}`,
       });
 
-      return parseInt(response.data.balance.amount);
+      const uaxlBalance = response.data.balances.find(
+        (balance) => balance.denom === "uaxl"
+      );
+
+      if (!uaxlBalance) {
+        throw new Error("uaxl balance not found");
+      }
+
+      return parseInt(uaxlBalance.amount);
     } catch (error) {
       logger.error(`Error fetching broadcaster balance: ${error}`);
       throw error;
