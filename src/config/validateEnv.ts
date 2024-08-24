@@ -41,7 +41,7 @@ const {
 
 const isDev = process.env.NODE_ENV === "development";
 const defaultRedisHost = "redis";
-const defaultRedisPort = "5379";
+const defaultRedisPort = "6379";
 
 const broadcasterBalanceThreshold = parseInt(BROADCASTER_BALANCE_THRESHOLD as string);
 if (isNaN(broadcasterBalanceThreshold) || broadcasterBalanceThreshold <= 0) {

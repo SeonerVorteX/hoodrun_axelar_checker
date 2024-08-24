@@ -40,7 +40,7 @@ services:
     container_name: redis
     image: redis
     ports:
-      - "5379:5379" # Expose Redis port
+      - "6379:6379" # Expose Redis port
     restart: "unless-stopped"
     networks:
       - backend
