@@ -53,6 +53,7 @@ services:
 
 networks:
   backend:
+    name: axelar-network-checker
     driver: bridge
 
 volumes:

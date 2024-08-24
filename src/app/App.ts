@@ -34,6 +34,7 @@ import {
   addBroadcasterBalanceCheckerJob,
 } from "@/queue/jobs/BroadcasterBalanceCheckerJob";
 import { AppDb } from "@database/database";
+import { testRedisConnection } from "@/queue/queue/AppQueueFactory";
 
 export default class App {
   axelarQueryService: AxelarQueryService;
@@ -48,7 +49,7 @@ export default class App {
     this.redisClient = createClient();
     this.redisClient.connect();
     this.appDb = new AppDb();
-    this.tgBot = null; // TGBot'u başlangıçta null olarak ayarlayın
+    this.tgBot = null; // Initialize TGBot as null
   }
 
   async initTgBot() {
@@ -56,26 +57,33 @@ export default class App {
   }
 
   async initalizeApplication() {
-    const maxRetries = 3;
+    const maxRetries = 5;
     let retries = 0;
 
     const initializeWithRetry = async () => {
       try {
+        logger.info("Testing Redis connection...");
+        const redisConnected = await testRedisConnection();
+        if (!redisConnected) {
+          throw new Error("Redis connection failed.");
+        }
+        logger.info("Redis connection successful.");
+
         await this.initDbConn();
         await this.initAxelarWS();
-        await this.initTgBot(); // TGBot'u başlatın
+        await this.initTgBot(); // Start TGBot
         await this.initJobsAndQueues();
         this.initHealthCheck();
-        logger.info("Application initialized successfully");
+        logger.info("Application started successfully");
       } catch (error) {
-        logger.error(`Error initializing application: ${error}`);
+        logger.error(`Application startup error: ${error}`);
         retries++;
         if (retries < maxRetries) {
           const delay = Math.pow(2, retries) * 1000;
-          logger.info(`Retrying initialization in ${delay}ms (attempt ${retries}/${maxRetries})`);
+          logger.info(`Retrying in ${delay}ms (attempt ${retries}/${maxRetries})`);
           setTimeout(initializeWithRetry, delay);
         } else {
-          logger.error("Max retries reached. Application could not be initialized.");
+          logger.error("Maximum retry attempts reached. Application failed to start.");
           process.exit(1);
         }
       }
