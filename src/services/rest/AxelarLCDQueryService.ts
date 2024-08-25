@@ -1,6 +1,7 @@
 import appConfig from "@/config/index";
 import { AxiosService } from "@/services/rest/axios/AxiosService";
 import { RegisterProxyGetResponse } from "@/services/rest/interfaces/tx/RegisterProxyGetResponse";
+import { logger } from "@utils/logger";
 
 export class AxelarLCDQueryService {
   restClient: AxiosService;
@@ -25,18 +26,24 @@ export class AxelarLCDQueryService {
 
   public async getValidatorVoterAddress(
     operatorAddress: string
-  ): Promise<string> {
-    const response = await this.getValidatorRegisterProxyInfo(operatorAddress);
-    if (response?.txs.length === 0) {
-      return Promise.reject(new Error("No RegisterProxy tx found"));
+  ): Promise<string | null> {
+    try {
+      const response = await this.getValidatorRegisterProxyInfo(operatorAddress);
+      if (!response || response.txs.length === 0) {
+        logger.warn(`No RegisterProxy tx found for operatorAddress: ${operatorAddress}`);
+        return null; // Return null if no transaction is found
+      }
+
+      const firstMessage = response.txs[0]?.body?.messages?.[0];
+      if (!firstMessage) {
+        logger.warn(`No message found in RegisterProxy tx for operatorAddress: ${operatorAddress}`);
+        return null; // Return null if no message is found
+      }
+
+      return firstMessage.proxy_addr as string;
+    } catch (error) {
+      logger.error(`Failed to get voter address: ${error}`);
+      throw error;
     }
-
-    const firstMessage = response?.txs?.[0]?.body?.messages?.[0];
-
-    if (!firstMessage) {
-      return Promise.reject(new Error("No message found in RegisterProxy tx"));
-    }
-
-    return firstMessage.proxy_addr as string;
   }
 }
