@@ -49,7 +49,7 @@ class AppQueueFactory {
     return this.queues[name];
   }
 
-  public static createQueue<T>(name: string): Queue.Queue<T> {
+  public static createQueue<T>(name: string, deleteOnCompleted?: boolean): Queue.Queue<T> {
     if (!this.queues[name]) {
       try {
         const queue = new Queue(name, {
@@ -77,7 +77,7 @@ class AppQueueFactory {
           },
         });
         this.onQueueError(queue, name);
-        this.onQueueCompleted(queue, name);
+        this.onQueueCompleted(queue, name, deleteOnCompleted);
         
         // queue.empty() çağrısını kaldırdık
 
@@ -87,14 +87,7 @@ class AppQueueFactory {
         logger.error(`Error creating queue ${name}: ${error}`);
         throw error;
       }
-     }// else if(name !== 'wsMessageResultHandlerQueue') {
-    //   // Delete the query
-    //   const oldQueue = this.queues[name];
-    //   oldQueue.close();
-    //   delete this.queues[name];
-    //   logger.info(`Queue ${name} already exists. Re-creating queue...`);
-    //   return this.createQueue(name);
-    // }
+     }
 
     return this.queues[name];
   }
@@ -105,9 +98,12 @@ class AppQueueFactory {
     });
   }
 
-  private static onQueueCompleted(queue: Queue.Queue, name: string) {
+  private static onQueueCompleted(queue: Queue.Queue, name: string, deleteOnCompleted?: boolean) {
     queue.on("completed", (job) => {
       logger.info(`Queue ${name} job completed: ${job.id}`);
+      if(deleteOnCompleted) {
+        this.removeQueue(name);
+      }
     });
   }
 
@@ -123,6 +119,15 @@ class AppQueueFactory {
 
   public static getAllQueues(): Queue.Queue[] {
     return Object.values(this.queues);
+  }
+
+  public static removeQueue(name: string) {
+    if (this.queues[name]) {
+      this.queues[name].removeJobs("*");
+      this.queues[name].close(true);
+      delete this.queues[name];
+      logger.info(`Queue ${name} removed successfully`);
+    }
   }
 
   public static async closeAll() {

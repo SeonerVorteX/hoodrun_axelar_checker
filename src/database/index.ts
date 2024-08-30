@@ -10,7 +10,7 @@ const connectionString =
 
 export const connectDb = async (env: string) => {
   if (env !== "production") {
-    set("debug", true);
+    // set("debug", true);
   }
 
   logger.info("Connecting to the database...", { connectionString });

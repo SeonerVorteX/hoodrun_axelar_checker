@@ -183,14 +183,15 @@ export default class App {
       try {
         const queue = AppQueueFactory.getQueue(name);
         const jobCounts = await queue.getJobCounts();
-        if (jobCounts.active === 0 && jobCounts.waiting === 0) {
+        if (jobCounts.active === 0 && jobCounts.waiting === 0 && jobCounts.delayed === 0) {
+          console.log(name, jobCounts, true)
           logger.warn(`Job ${name} seems to be inactive. Restarting...`);
           await job();
         }
       } catch (error) {
         logger.error(`Error checking health of job ${name}:`, error);
       }
-    }, 5 * 60 * 1000); // Check every 5 minutes
+    }, 40 * 1000); // Check every 5 minutes
   }
 
   private initHealthCheck() {
@@ -203,11 +204,13 @@ export default class App {
         if (!redisStatus || !dbStatus || !queuesStatus) {
           logger.error("Health check failed. Attempting to reinitialize application.");
           await this.initalizeApplication(true);
+        } else {
+          logger.info('Health check passed successfully')
         }
       } catch (error) {
         logger.error(`Error during health check: ${error}`);
       }
-    }, 5 * 60 * 1000); // Check every 5 minutes
+    }, 60 * 1000); // Check every 5 minutes
   }
 
   private async checkDatabaseConnection() {
@@ -227,9 +230,11 @@ export default class App {
   private async checkQueuesStatus() {
     try {
       const queues = AppQueueFactory.getAllQueues();
+      console.log(queues.map(q => q.name))
       for (const queue of queues) {
         const jobCounts = await queue.getJobCounts();
-        if (jobCounts.active === 0 && jobCounts.waiting === 0) {
+        if (jobCounts.active === 0 && jobCounts.waiting === 0 && jobCounts.delayed === 0) {
+          console.log(queue.name, jobCounts)
           return false;
         }
       }

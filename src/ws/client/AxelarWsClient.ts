@@ -56,6 +56,7 @@ export class AxelarWsClient {
     };
 
     this.ws.onmessage = (event) => {
+      console.log('Message', event.data)
       addWsMessageResultHandlerJob({ messageData: event?.data });
       this.emit('message', event);
     };
