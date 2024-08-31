@@ -183,15 +183,14 @@ export default class App {
       try {
         const queue = AppQueueFactory.getQueue(name);
         const jobCounts = await queue.getJobCounts();
-        if (jobCounts.active === 0 && jobCounts.waiting === 0 && jobCounts.delayed === 0) {
-          console.log(name, jobCounts, true)
+        if (jobCounts.active === 0 && jobCounts.waiting === 0) {
           logger.warn(`Job ${name} seems to be inactive. Restarting...`);
           await job();
         }
       } catch (error) {
         logger.error(`Error checking health of job ${name}:`, error);
       }
-    }, 40 * 1000); // Check every 5 minutes
+    }, 4.5 * 60 * 1000); // Check every 5 minutes
   }
 
   private initHealthCheck() {
@@ -210,7 +209,7 @@ export default class App {
       } catch (error) {
         logger.error(`Error during health check: ${error}`);
       }
-    }, 60 * 1000); // Check every 5 minutes
+    }, 5 * 60 * 1000); // Check every 5 minutes
   }
 
   private async checkDatabaseConnection() {
@@ -230,11 +229,11 @@ export default class App {
   private async checkQueuesStatus() {
     try {
       const queues = AppQueueFactory.getAllQueues();
-      console.log(queues.map(q => q.name))
       for (const queue of queues) {
         const jobCounts = await queue.getJobCounts();
+
         if (jobCounts.active === 0 && jobCounts.waiting === 0 && jobCounts.delayed === 0) {
-          console.log(queue.name, jobCounts)
+          console.log(`Queue ${queue.name} is inactive.`)
           return false;
         }
       }

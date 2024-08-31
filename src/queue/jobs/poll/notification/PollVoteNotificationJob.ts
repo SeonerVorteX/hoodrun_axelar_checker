@@ -12,12 +12,11 @@ import { xSeconds } from "queue/jobHelper";
 import appJobProducer from "queue/producer/AppJobProducer";
 import AppQueueFactory from "queue/queue/AppQueueFactory";
 
-const POLL_VOTE_NOTIFICATION_JOB = "pollVoteNotification";
+const POLL_VOTE_NOTIFICATION_JOB = "pollVoteNotificationJob";
 
 export const initPollVoteNotificationQueue = async () => {
   const pollVoteNotificationJobQueue = AppQueueFactory.createQueue(
-    POLL_VOTE_NOTIFICATION_JOB,
-    true
+    POLL_VOTE_NOTIFICATION_JOB
   );
 
   pollVoteNotificationJobQueue.process(async () => {
@@ -34,7 +33,7 @@ export const initPollVoteNotificationQueue = async () => {
         xHourAgoDate.getHours() - appConfig.maxLastXHourPollVoteNotification
       );
 
-      const vote = PollVoteType.NO;
+      const vote = PollVoteType.YES;
       const allNoPollVotes = await pollVoteRepo.findAll({
         vote,
         createdAt: { $gte: xHourAgoDate },
