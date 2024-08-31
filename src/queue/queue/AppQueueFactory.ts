@@ -123,7 +123,6 @@ class AppQueueFactory {
 
   public static removeQueue(name: string) {
     if (this.queues[name]) {
-      console.log(name)
       this.queues[name].removeJobs("*");
       this.queues[name].close(true);
       delete this.queues[name];
